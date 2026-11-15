@@ -1,0 +1,54 @@
+version: "1.0"
+
+tournament:
+  name: "Enterprise LLM Pairwise Benchmark"
+  schedule: "round-robin" # options: "round-robin", "swiss", "random"
+  rounds: 2
+  concurrency: 4
+  database: "evalarena.db"
+
+judge:
+  provider: "mock" # options: "mock", "openai", "anthropic", "gemini", "ollama"
+  model: "mock-judge-ultra"
+  temperature: 0.1
+  debias_position: true # dual-pass order swapping (A/B and B/A)
+  rubric_file: "examples/custom_rubric.md"
+
+models:
+  - id: "gpt-4o"
+    provider: "mock"
+    model: "simulated-gpt-4o"
+    pricing:
+      input_per_million: 2.50
+      output_per_million: 10.00
+
+  - id: "claude-3-5-sonnet"
+    provider: "mock"
+    model: "simulated-claude-3-5-sonnet"
+    pricing:
+      input_per_million: 3.00
+      output_per_million: 15.00
+
+  - id: "gemini-2.0-flash"
+    provider: "mock"
+    model: "simulated-gemini-2-flash"
+    pricing:
+      input_per_million: 0.10
+      output_per_million: 0.40
+
+  - id: "llama-3.1-8b-instruct"
+    provider: "mock"
+    model: "simulated-llama-3-8b"
+    pricing:
+      input_per_million: 0.05
+      output_per_million: 0.08
+
+dataset:
+  path: "examples/dataset.jsonl"
+  format: "jsonl"
+
+gate:
+  baseline_model: "gpt-4o"
+  candidate_model: "gemini-2.0-flash"
+  max_elo_drop: 45.0
+  max_cost_ratio: 0.30

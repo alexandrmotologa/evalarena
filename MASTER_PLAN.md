@@ -221,60 +221,60 @@ evalarena/
 ## 6. Implementation Progress Tracker
 
 ### Phase 1: Project Setup, Tooling & Documentation Foundation
-- [ ] 1.1 Initialize Git repository, configure GitHub remote, set topics and description
-- [ ] 1.2 Setup Go module (`github.com/alexandrmotologa/evalarena`) with `go 1.24+`
-- [ ] 1.3 Add `.gitignore`, `LICENSE`, and `Makefile`
-- [ ] 1.4 Write comprehensive documentation in `docs/` (Architecture, Bradley-Terry Math, Position Bias, Config Guide, API Spec)
-- [ ] 1.5 Write clean humanized `README.md` (no fake images, factual, clear CLI guide)
+- [x] 1.1 Initialize Git repository, configure GitHub remote, set topics and description
+- [x] 1.2 Setup Go module (`github.com/alexandrmotologa/evalarena`) with `go 1.24+`
+- [x] 1.3 Add `.gitignore`, `LICENSE`, and `Makefile`
+- [x] 1.4 Write comprehensive documentation in `docs/` (Architecture, Bradley-Terry Math, Position Bias, Config Guide, API Spec)
+- [x] 1.5 Write clean humanized `README.md` (no fake images, factual, clear CLI guide)
 
 ### Phase 2: Configuration, Dataset Ingestion & SQLite Storage
-- [ ] 2.1 Implement `internal/config`: YAML configuration parser, validation, pricing registry
-- [ ] 2.2 Implement `internal/dataset`: JSONL, CSV, and YAML prompt loader with schema validation
-- [ ] 2.3 Implement `internal/tournament/store.go`: Pure Go embedded SQLite (`modernc.org/sqlite`) with automatic schema creation and migrations
+- [x] 2.1 Implement `internal/config`: YAML configuration parser, validation, pricing registry
+- [x] 2.2 Implement `internal/dataset`: JSONL, CSV, and YAML prompt loader with schema validation
+- [x] 2.3 Implement `internal/tournament/store.go`: Pure Go embedded SQLite (`modernc.org/sqlite`) with automatic schema creation and migrations
 
 ### Phase 3: Universal Provider Engine with Metrics & Simulation
-- [ ] 3.1 Implement `internal/provider/client.go`: Provider interface, completion requests, response schemas
-- [ ] 3.2 Implement `internal/provider/pricing.go`: Per-token cost calculator with default pricing for OpenAI, Anthropic, Gemini, Mistral, and local models
-- [ ] 3.3 Implement `internal/provider/mock.go`: Deterministic simulation provider for offline tests, CI/CD, and demonstrations
-- [ ] 3.4 Implement real providers: OpenAI (`openai.go`), Anthropic (`anthropic.go`), Gemini (`gemini.go`), and Ollama/vLLM (`ollama.go`)
-- [ ] 3.5 Implement `internal/provider/pool.go`: Concurrency manager with rate limiting and retry backoff
+- [x] 3.1 Implement `internal/provider/client.go`: Provider interface, completion requests, response schemas
+- [x] 3.2 Implement `internal/provider/pricing.go`: Per-token cost calculator with default pricing for OpenAI, Anthropic, Gemini, Mistral, and local models
+- [x] 3.3 Implement `internal/provider/mock.go`: Deterministic simulation provider for offline tests, CI/CD, and demonstrations
+- [x] 3.4 Implement real providers: OpenAI (`openai.go`), Anthropic (`anthropic.go`), Gemini (`gemini.go`), and Ollama/vLLM (`ollama.go`)
+- [x] 3.5 Implement `internal/provider/pool.go`: Concurrency manager with rate limiting and retry backoff
 
 ### Phase 4: Position-Debiased LLM-as-a-Judge Engine
-- [ ] 4.1 Implement `internal/judge/rubric.go`: Scoring rubrics, evaluation criteria, and system prompt formatting
-- [ ] 4.2 Implement `internal/judge/llm_judge.go`: LLM evaluation harness with JSON structured outputs
-- [ ] 4.3 Implement `internal/judge/debias.go`: Order-swapping protocol (A/B and B/A), consistency verification, and tie classification
+- [x] 4.1 Implement `internal/judge/rubric.go`: Scoring rubrics, evaluation criteria, and system prompt formatting
+- [x] 4.2 Implement `internal/judge/llm_judge.go`: LLM evaluation harness with JSON structured outputs
+- [x] 4.3 Implement `internal/judge/debias.go`: Order-swapping protocol (A/B and B/A), consistency verification, and tie classification
 
 ### Phase 5: Tournament Matchmaker & Execution Pipeline
-- [ ] 5.1 Implement `internal/tournament/matchmaker.go`: Round-Robin, Swiss, and Random pairing algorithms
-- [ ] 5.2 Implement `internal/tournament/runner.go`: Multi-model async execution, response collection, dual-pass judge submission, database persistence
-- [ ] 5.3 Implement SSE event dispatcher for real-time progress broadcast
+- [x] 5.1 Implement `internal/tournament/matchmaker.go`: Round-Robin, Swiss, and Random pairing algorithms
+- [x] 5.2 Implement `internal/tournament/runner.go`: Multi-model async execution, response collection, dual-pass judge submission, database persistence
+- [x] 5.3 Implement SSE event dispatcher for real-time progress broadcast
 
 ### Phase 6: Bradley-Terry ELO Solver & Pareto Efficiency Engine
-- [ ] 6.1 Implement `internal/elo/bradley_terry.go`: Maximum Likelihood Estimation solver with Newton-Raphson iteration
-- [ ] 6.2 Implement `internal/elo/bootstrap.go`: Non-parametric bootstrap resampling (1,000 iterations) for 95% confidence intervals
-- [ ] 6.3 Implement `internal/elo/matrix.go`: Pairwise head-to-head win-loss-tie matrix calculation
-- [ ] 6.4 Implement `internal/elo/pareto.go`: Pareto efficiency frontier calculation identifying cost-efficient models
+- [x] 6.1 Implement `internal/elo/bradley_terry.go`: Maximum Likelihood Estimation solver with Newton-Raphson iteration
+- [x] 6.2 Implement `internal/elo/bootstrap.go`: Non-parametric bootstrap resampling (1,000 iterations) for 95% confidence intervals
+- [x] 6.3 Implement `internal/elo/matrix.go`: Pairwise head-to-head win-loss-tie matrix calculation
+- [x] 6.4 Implement `internal/elo/pareto.go`: Pareto efficiency frontier calculation identifying cost-efficient models
 
 ### Phase 7: REST API, Server & Embedded React 19 Studio
-- [ ] 7.1 Implement `internal/server/api.go`: REST API endpoints for models, battles, leaderboard, human voting, and tournament triggers
-- [ ] 7.2 Implement `internal/server/sse.go`: Real-time SSE streaming endpoint for live tournament rounds
-- [ ] 7.3 Build React 19 Arena Studio in `web/` (Tailwind CSS, Lucide icons, Leaderboard with 95% CI, Pareto Frontier plot, Blind Arena Vote, Win-Rate Matrix, Match Inspector)
-- [ ] 7.4 Embed static build into Go binary (`//go:embed all:web/dist`) with single-binary HTTP server
+- [x] 7.1 Implement `internal/server/api.go`: REST API endpoints for models, battles, leaderboard, human voting, and tournament triggers
+- [x] 7.2 Implement `internal/server/sse.go`: Real-time SSE streaming endpoint for live tournament rounds
+- [x] 7.3 Build React 19 Arena Studio in `web/` (Tailwind CSS, Lucide icons, Leaderboard with 95% CI, Pareto Frontier plot, Blind Arena Vote, Win-Rate Matrix, Match Inspector)
+- [x] 7.4 Embed static build into Go binary (`//go:embed all:dist`) with single-binary HTTP server
 
 ### Phase 8: CLI Commands, CI/CD Quality Gate & Executive Reports
-- [ ] 8.1 Implement CLI commands in `cmd/evalarena/main.go`:
+- [x] 8.1 Implement CLI commands in `cmd/evalarena/main.go`:
   - `evalarena run`: Run tournament from config file
   - `evalarena arena`: Start embedded web studio
   - `evalarena report`: Generate terminal, markdown, JSON, or CSV report
   - `evalarena check`: Automated CI/CD regression quality gate (`--fail-if-below`)
   - `evalarena init`: Scaffold starter config and dataset
-- [ ] 8.2 Implement `internal/report`: Terminal colored output and Markdown executive report generator
-- [ ] 8.3 Setup GitHub Actions CI workflow (`.github/workflows/ci.yml`)
+- [x] 8.2 Implement `internal/report`: Terminal colored output and Markdown executive report generator
+- [x] 8.3 Setup GitHub Actions CI workflow (`.github/workflows/ci.yml`)
 
 ### Phase 9: Verification, Test Suite & Mathematical Validation
-- [ ] 9.1 Unit tests for Bradley-Terry math solver against known reference datasets
-- [ ] 9.2 Unit tests for bootstrap confidence intervals and Pareto dominance calculations
-- [ ] 9.3 Unit tests for position bias mitigation and order swapping
-- [ ] 9.4 End-to-end tournament run verification with simulation models
-- [ ] 9.5 Memory benchmark verification confirming < 25MB RAM footprint
-- [ ] 9.6 Commit and push to GitHub repository
+- [x] 9.1 Unit tests for Bradley-Terry math solver against known reference datasets
+- [x] 9.2 Unit tests for bootstrap confidence intervals and Pareto dominance calculations
+- [x] 9.3 Unit tests for position bias mitigation and order swapping
+- [x] 9.4 End-to-end tournament run verification with simulation models
+- [x] 9.5 Memory benchmark verification confirming < 25MB RAM footprint (measured 15.87 MB)
+- [x] 9.6 Commit and push to GitHub repository

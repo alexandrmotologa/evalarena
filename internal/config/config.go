@@ -66,7 +66,7 @@ func Load(path string) (*Config, error) {
 	// Read rubric file if specified
 	if cfg.Judge.RubricFile != "" {
 		rubricPath := cfg.Judge.RubricFile
-		if !filepath.IsAbs(rubricPath) {
+		if _, err := os.Stat(rubricPath); err != nil && !filepath.IsAbs(rubricPath) {
 			rubricPath = filepath.Join(filepath.Dir(path), rubricPath)
 		}
 		content, err := os.ReadFile(rubricPath)
@@ -95,7 +95,9 @@ func applyDefaults(cfg *Config, baseDir string) {
 	if cfg.Tournament.Database == "" {
 		cfg.Tournament.Database = "evalarena.db"
 	} else if !filepath.IsAbs(cfg.Tournament.Database) && baseDir != "" {
-		cfg.Tournament.Database = filepath.Join(baseDir, cfg.Tournament.Database)
+		if _, err := os.Stat(cfg.Tournament.Database); err != nil {
+			cfg.Tournament.Database = filepath.Join(baseDir, cfg.Tournament.Database)
+		}
 	}
 
 	if cfg.Judge.Provider == "" {
@@ -110,7 +112,9 @@ func applyDefaults(cfg *Config, baseDir string) {
 
 	// Adjust dataset path relative to config file if needed
 	if cfg.Dataset.Path != "" && !filepath.IsAbs(cfg.Dataset.Path) && baseDir != "" {
-		cfg.Dataset.Path = filepath.Join(baseDir, cfg.Dataset.Path)
+		if _, err := os.Stat(cfg.Dataset.Path); err != nil {
+			cfg.Dataset.Path = filepath.Join(baseDir, cfg.Dataset.Path)
+		}
 	}
 	if cfg.Dataset.Format == "" {
 		cfg.Dataset.Format = "jsonl"

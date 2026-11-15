@@ -48,6 +48,7 @@ export interface MatchRecord {
   id: string;
   tournament_id: string;
   prompt_id: string;
+  category: string;
   prompt_text: string;
   round_num: number;
   model_a_id: string;
@@ -73,6 +74,7 @@ export interface MatchRecord {
 export interface BlindMatch {
   match_id: string;
   prompt: string;
+  category?: string;
   response_a: string;
   response_b: string;
   round_num: number;
@@ -89,28 +91,81 @@ export interface VoteReveal {
   bias_detected: boolean;
 }
 
+export interface CalibrationReport {
+  total_comparisons: number;
+  agreements: number;
+  observed_agreement_pct: number;
+  expected_agreement_pct: number;
+  cohens_kappa: number;
+  interpretation: string;
+}
+
+export interface QuickBattleRequest {
+  prompt: string;
+  system_prompt?: string;
+  model_a_id: string;
+  model_b_id: string;
+  rubric?: string;
+}
+
+export interface QuickBattleResponse {
+  match_id: string;
+  model_a_id: string;
+  model_b_id: string;
+  response_a: string;
+  response_b: string;
+  latency_a_ms: number;
+  latency_b_ms: number;
+  cost_a: number;
+  cost_b: number;
+  tokens_a: number;
+  tokens_b: number;
+  pass1_winner: string;
+  pass1_reasoning: string;
+  pass2_winner: string;
+  pass2_reasoning: string;
+  final_winner: string;
+  position_bias_detected: boolean;
+}
+
 const API_BASE = '/api';
 
-export async function fetchLeaderboard(): Promise<ModelRating[]> {
-  const res = await fetch(`${API_BASE}/leaderboard`);
+export async function fetchCategories(): Promise<string[]> {
+  const res = await fetch(`${API_BASE}/categories`);
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function fetchCalibration(): Promise<CalibrationReport> {
+  const res = await fetch(`${API_BASE}/calibration`);
+  if (!res.ok) throw new Error(`Failed to fetch calibration: ${res.statusText}`);
+  return res.json();
+}
+
+export async function fetchLeaderboard(category?: string): Promise<ModelRating[]> {
+  const url = category ? `${API_BASE}/leaderboard?category=${encodeURIComponent(category)}` : `${API_BASE}/leaderboard`;
+  const res = await fetch(url);
   if (!res.ok) throw new Error(`Failed to fetch leaderboard: ${res.statusText}`);
   return res.json();
 }
 
-export async function fetchMatrix(): Promise<WinRateMatrix> {
-  const res = await fetch(`${API_BASE}/matrix`);
+export async function fetchMatrix(category?: string): Promise<WinRateMatrix> {
+  const url = category ? `${API_BASE}/matrix?category=${encodeURIComponent(category)}` : `${API_BASE}/matrix`;
+  const res = await fetch(url);
   if (!res.ok) throw new Error(`Failed to fetch matrix: ${res.statusText}`);
   return res.json();
 }
 
-export async function fetchPareto(): Promise<{ points: ParetoPoint[]; recommendations: Recommendation[] }> {
-  const res = await fetch(`${API_BASE}/pareto`);
+export async function fetchPareto(category?: string): Promise<{ points: ParetoPoint[]; recommendations: Recommendation[] }> {
+  const url = category ? `${API_BASE}/pareto?category=${encodeURIComponent(category)}` : `${API_BASE}/pareto`;
+  const res = await fetch(url);
   if (!res.ok) throw new Error(`Failed to fetch pareto: ${res.statusText}`);
   return res.json();
 }
 
-export async function fetchMatches(): Promise<MatchRecord[]> {
-  const res = await fetch(`${API_BASE}/matches`);
+export async function fetchMatches(category?: string): Promise<MatchRecord[]> {
+  const url = category ? `${API_BASE}/matches?category=${encodeURIComponent(category)}` : `${API_BASE}/matches`;
+  const res = await fetch(url);
   if (!res.ok) throw new Error(`Failed to fetch matches: ${res.statusText}`);
   return res.json();
 }
@@ -128,6 +183,16 @@ export async function submitArenaVote(matchId: string, vote: string): Promise<Vo
     body: JSON.stringify({ match_id: matchId, vote }),
   });
   if (!res.ok) throw new Error(`Failed to submit vote: ${res.statusText}`);
+  return res.json();
+}
+
+export async function quickBattle(req: QuickBattleRequest): Promise<QuickBattleResponse> {
+  const res = await fetch(`${API_BASE}/battle/quick`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(req),
+  });
+  if (!res.ok) throw new Error(`Quick battle failed: ${res.statusText}`);
   return res.json();
 }
 

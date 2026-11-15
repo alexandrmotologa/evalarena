@@ -91,11 +91,26 @@ func (c *GeminiClient) Generate(ctx context.Context, req CompletionRequest) (*Co
 		}
 	}
 
-	payload.Contents = []geminiContent{
-		{
-			Role:  "user",
-			Parts: []geminiPart{{Text: req.Prompt}},
-		},
+	if len(req.Messages) > 0 {
+		for _, m := range req.Messages {
+			role := m.Role
+			if role == "assistant" {
+				role = "model"
+			} else {
+				role = "user"
+			}
+			payload.Contents = append(payload.Contents, geminiContent{
+				Role:  role,
+				Parts: []geminiPart{{Text: m.Content}},
+			})
+		}
+	} else {
+		payload.Contents = []geminiContent{
+			{
+				Role:  "user",
+				Parts: []geminiPart{{Text: req.Prompt}},
+			},
+		}
 	}
 
 	body, err := json.Marshal(payload)

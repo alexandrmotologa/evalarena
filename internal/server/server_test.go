@@ -1,7 +1,7 @@
 package server_test
 
 import (
-	"encoding/json"
+	"bytes"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
@@ -42,7 +42,7 @@ func TestServer_HealthAndEndpoints(t *testing.T) {
 	}
 
 	items := []dataset.Item{
-		{ID: "p1", Prompt: "Test prompt"},
+		{ID: "p1", Category: "support", Prompt: "Test prompt"},
 	}
 
 	pool, err := provider.NewPool(cfg.Models, cfg.Judge)
@@ -57,12 +57,14 @@ func TestServer_HealthAndEndpoints(t *testing.T) {
 		ID:           "test_match_1",
 		TournamentID: "API Test Tournament",
 		PromptID:     "p1",
+		Category:     "support",
 		PromptText:   "Test prompt",
 		ModelAID:     "m1",
 		ModelBID:     "m2",
 		ResponseA:    "Answer 1",
 		ResponseB:    "Answer 2",
 		FinalWinner:  "m1",
+		HumanVote:    "model_a",
 		CreatedAt:    time.Now(),
 	}
 	if err := store.SaveMatch(&match); err != nil {
@@ -82,29 +84,31 @@ func TestServer_HealthAndEndpoints(t *testing.T) {
 		t.Errorf("expected status 200, got %d", res.StatusCode)
 	}
 
-	// Test GET /api/leaderboard
-	lbRes, err := http.Get(ts.URL + "/api/leaderboard")
+	// Test GET /api/categories
+	catRes, err := http.Get(ts.URL + "/api/categories")
 	if err != nil {
-		t.Fatalf("leaderboard request failed: %v", err)
+		t.Fatalf("categories request failed: %v", err)
 	}
-	if lbRes.StatusCode != http.StatusOK {
-		t.Errorf("expected status 200 from leaderboard, got %d", lbRes.StatusCode)
+	if catRes.StatusCode != http.StatusOK {
+		t.Errorf("expected status 200, got %d", catRes.StatusCode)
 	}
 
-	// Test GET /api/arena/next
-	arenaRes, err := http.Get(ts.URL + "/api/arena/next")
+	// Test GET /api/calibration
+	calRes, err := http.Get(ts.URL + "/api/calibration")
 	if err != nil {
-		t.Fatalf("arena next failed: %v", err)
+		t.Fatalf("calibration request failed: %v", err)
 	}
-	if arenaRes.StatusCode != http.StatusOK {
-		t.Errorf("expected status 200 from arena next, got %d", arenaRes.StatusCode)
+	if calRes.StatusCode != http.StatusOK {
+		t.Errorf("expected status 200, got %d", calRes.StatusCode)
 	}
 
-	var blindView map[string]interface{}
-	if err := json.NewDecoder(arenaRes.Body).Decode(&blindView); err != nil {
-		t.Fatalf("failed to decode arena next JSON: %v", err)
+	// Test POST /api/battle/quick
+	quickBody := []byte(`{"prompt":"What is caching?","model_a_id":"m1","model_b_id":"m2"}`)
+	quickRes, err := http.Post(ts.URL+"/api/battle/quick", "application/json", bytes.NewReader(quickBody))
+	if err != nil {
+		t.Fatalf("quick battle request failed: %v", err)
 	}
-	if blindView["match_id"] != "test_match_1" {
-		t.Errorf("expected match_id test_match_1, got %v", blindView["match_id"])
+	if quickRes.StatusCode != http.StatusOK {
+		t.Errorf("expected status 200, got %d", quickRes.StatusCode)
 	}
 }

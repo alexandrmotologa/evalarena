@@ -83,14 +83,33 @@ func (c *AnthropicClient) Generate(ctx context.Context, req CompletionRequest) (
 		maxTokens = 2048
 	}
 
-	messages := []anthropicMessage{
-		{Role: "user", Content: req.Prompt},
+	var messages []anthropicMessage
+	systemPrompt := req.SystemPrompt
+
+	if len(req.Messages) > 0 {
+		for _, m := range req.Messages {
+			if m.Role == "system" {
+				if systemPrompt == "" {
+					systemPrompt = m.Content
+				}
+				continue
+			}
+			role := m.Role
+			if role != "assistant" {
+				role = "user"
+			}
+			messages = append(messages, anthropicMessage{Role: role, Content: m.Content})
+		}
+	} else {
+		messages = []anthropicMessage{
+			{Role: "user", Content: req.Prompt},
+		}
 	}
 
 	payload := anthropicRequest{
 		Model:       c.model,
 		Messages:    messages,
-		System:      req.SystemPrompt,
+		System:      systemPrompt,
 		MaxTokens:   maxTokens,
 		Temperature: req.Temperature,
 	}

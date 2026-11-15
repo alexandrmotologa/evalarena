@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BlindMatch, VoteReveal, fetchNextArenaMatch, submitArenaVote } from '../api/client';
-import { EyeOff, ThumbsUp, Scale, RefreshCw, CheckCircle, ShieldAlert, Sparkles, AlertCircle } from 'lucide-react';
+import { EyeOff, ThumbsUp, Scale, RefreshCw, CheckCircle, ShieldAlert, AlertCircle, SplitSquareVertical } from 'lucide-react';
+import { computeWordDiff } from '../utils/diff';
 
 export const BlindArenaVote: React.FC = () => {
   const [match, setMatch] = useState<BlindMatch | null>(null);
@@ -8,11 +9,13 @@ export const BlindArenaVote: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [showDiff, setShowDiff] = useState<boolean>(false);
 
   const loadNext = async () => {
     setLoading(true);
     setReveal(null);
     setError(null);
+    setShowDiff(false);
     try {
       const data = await fetchNextArenaMatch();
       setMatch(data);
@@ -40,6 +43,8 @@ export const BlindArenaVote: React.FC = () => {
       setSubmitting(false);
     }
   };
+
+  const diffResult = match ? computeWordDiff(match.response_a, match.response_b) : null;
 
   if (loading) {
     return (
@@ -79,7 +84,7 @@ export const BlindArenaVote: React.FC = () => {
   return (
     <div style={{ background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border-subtle)', padding: '1.75rem' }}>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <h2 style={{ fontSize: '1.2rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <EyeOff style={{ width: 22, height: 22, color: 'var(--accent)' }} />
@@ -89,8 +94,37 @@ export const BlindArenaVote: React.FC = () => {
             Compare completions side-by-side without knowing model identities. Vote objectively based on prompt adherence.
           </p>
         </div>
-        <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)', background: 'var(--bg-subtle)', padding: '0.3rem 0.75rem', borderRadius: '6px' }}>
-          Match ID: <code className="font-mono">{match.match_id}</code>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <button
+            onClick={() => setShowDiff(!showDiff)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              fontSize: '0.75rem',
+              padding: '0.35rem 0.75rem',
+              borderRadius: '4px',
+              background: showDiff ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.04)',
+              color: showDiff ? 'var(--accent-light)' : 'var(--text-muted)',
+              border: showDiff ? '1px solid var(--accent)' : '1px solid var(--border-subtle)',
+              cursor: 'pointer',
+              fontWeight: 600,
+            }}
+          >
+            <SplitSquareVertical style={{ width: 14, height: 14 }} />
+            {showDiff ? 'Diff View Active' : 'Toggle Diff View'}
+          </button>
+
+          {match.category && (
+            <span style={{ fontSize: '0.75rem', color: 'var(--accent-light)', background: 'rgba(99, 102, 241, 0.15)', padding: '0.3rem 0.6rem', borderRadius: '4px', fontWeight: 600 }}>
+              {match.category}
+            </span>
+          )}
+
+          <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)', background: 'var(--bg-subtle)', padding: '0.3rem 0.75rem', borderRadius: '6px' }}>
+            Match: <code className="font-mono">{match.match_id}</code>
+          </div>
         </div>
       </div>
 
@@ -128,7 +162,22 @@ export const BlindArenaVote: React.FC = () => {
               )}
             </div>
             <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
-              {match.response_a}
+              {showDiff && diffResult ? (
+                diffResult.diffA.map((t, idx) => (
+                  <span
+                    key={idx}
+                    style={{
+                      background: t.type === 'removed' ? 'rgba(239,68,68,0.2)' : 'transparent',
+                      color: t.type === 'removed' ? '#fca5a5' : 'inherit',
+                      borderRadius: 2,
+                    }}
+                  >
+                    {t.value}
+                  </span>
+                ))
+              ) : (
+                match.response_a
+              )}
             </div>
           </div>
 
@@ -180,7 +229,22 @@ export const BlindArenaVote: React.FC = () => {
               )}
             </div>
             <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
-              {match.response_b}
+              {showDiff && diffResult ? (
+                diffResult.diffB.map((t, idx) => (
+                  <span
+                    key={idx}
+                    style={{
+                      background: t.type === 'added' ? 'rgba(16,185,129,0.2)' : 'transparent',
+                      color: t.type === 'added' ? '#6ee7b7' : 'inherit',
+                      borderRadius: 2,
+                    }}
+                  >
+                    {t.value}
+                  </span>
+                ))
+              ) : (
+                match.response_b
+              )}
             </div>
           </div>
 

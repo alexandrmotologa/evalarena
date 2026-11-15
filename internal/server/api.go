@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"sync"
 	"time"
@@ -10,6 +11,7 @@ import (
 	"github.com/alexandrmotologa/evalarena/internal/config"
 	"github.com/alexandrmotologa/evalarena/internal/dataset"
 	"github.com/alexandrmotologa/evalarena/internal/elo"
+	"github.com/alexandrmotologa/evalarena/internal/judge"
 	"github.com/alexandrmotologa/evalarena/internal/provider"
 	"github.com/alexandrmotologa/evalarena/internal/tournament"
 )
@@ -63,12 +65,15 @@ func (s *Server) Handler() http.Handler {
 
 func (s *Server) routes() {
 	s.mux.HandleFunc("GET /api/health", s.handleHealth)
+	s.mux.HandleFunc("GET /api/categories", s.handleCategories)
+	s.mux.HandleFunc("GET /api/calibration", s.handleCalibration)
 	s.mux.HandleFunc("GET /api/leaderboard", s.handleLeaderboard)
 	s.mux.HandleFunc("GET /api/matrix", s.handleMatrix)
 	s.mux.HandleFunc("GET /api/pareto", s.handlePareto)
 	s.mux.HandleFunc("GET /api/matches", s.handleMatches)
 	s.mux.HandleFunc("GET /api/arena/next", s.handleArenaNext)
 	s.mux.HandleFunc("POST /api/arena/vote", s.handleArenaVote)
+	s.mux.HandleFunc("POST /api/battle/quick", s.handleQuickBattle)
 	s.mux.HandleFunc("POST /api/tournament/start", s.handleTournamentStart)
 	s.mux.HandleFunc("GET /api/events", HandleSSE(s.bus))
 }
@@ -82,8 +87,54 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (s *Server) handleCategories(w http.ResponseWriter, r *http.Request) {
+	catsFromDB, _ := s.store.GetCategories(s.cfg.Tournament.Name)
+	catSet := make(map[string]bool)
+	for _, c := range catsFromDB {
+		if c != "" {
+			catSet[c] = true
+		}
+	}
+	for _, item := range s.dataset {
+		if item.Category != "" {
+			catSet[item.Category] = true
+		}
+	}
+
+	var categories []string
+	for c := range catSet {
+		categories = append(categories, c)
+	}
+
+	writeJSON(w, http.StatusOK, categories)
+}
+
+func (s *Server) handleCalibration(w http.ResponseWriter, r *http.Request) {
+	matches, err := s.store.GetMatches(s.cfg.Tournament.Name, "")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	var pairs []elo.ComparisonPair
+	for _, m := range matches {
+		if m.HumanVote != "" {
+			pairs = append(pairs, elo.ComparisonPair{
+				HumanVote:   m.HumanVote,
+				JudgeWinner: m.FinalWinner,
+				ModelAID:    m.ModelAID,
+				ModelBID:    m.ModelBID,
+			})
+		}
+	}
+
+	calib := elo.ComputeJudgeCalibration(pairs)
+	writeJSON(w, http.StatusOK, calib)
+}
+
 func (s *Server) handleLeaderboard(w http.ResponseWriter, r *http.Request) {
-	ratings, err := s.computeCurrentRatings()
+	category := r.URL.Query().Get("category")
+	ratings, err := s.computeCurrentRatings(category)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -92,7 +143,8 @@ func (s *Server) handleLeaderboard(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleMatrix(w http.ResponseWriter, r *http.Request) {
-	matches, err := s.store.GetMatches(s.cfg.Tournament.Name)
+	category := r.URL.Query().Get("category")
+	matches, err := s.store.GetMatches(s.cfg.Tournament.Name, category)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -117,7 +169,8 @@ func (s *Server) handleMatrix(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handlePareto(w http.ResponseWriter, r *http.Request) {
-	ratings, err := s.computeCurrentRatings()
+	category := r.URL.Query().Get("category")
+	ratings, err := s.computeCurrentRatings(category)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -143,7 +196,8 @@ func (s *Server) handlePareto(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleMatches(w http.ResponseWriter, r *http.Request) {
-	matches, err := s.store.GetMatches(s.cfg.Tournament.Name)
+	category := r.URL.Query().Get("category")
+	matches, err := s.store.GetMatches(s.cfg.Tournament.Name, category)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -158,10 +212,10 @@ func (s *Server) handleArenaNext(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Anonymize model identities for blind evaluation
 	blindView := map[string]interface{}{
 		"match_id":   match.ID,
 		"prompt":     match.PromptText,
+		"category":   match.Category,
 		"response_a": match.ResponseA,
 		"response_b": match.ResponseB,
 		"round_num":  match.RoundNum,
@@ -188,7 +242,6 @@ func (s *Server) handleArenaVote(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Reveal identities and stats upon receiving human vote
 	reveal := map[string]interface{}{
 		"match_id":           record.ID,
 		"vote":               record.HumanVote,
@@ -202,6 +255,118 @@ func (s *Server) handleArenaVote(w http.ResponseWriter, r *http.Request) {
 
 	s.bus.Publish("human_vote", reveal)
 	writeJSON(w, http.StatusOK, reveal)
+}
+
+type quickBattleRequest struct {
+	Prompt       string `json:"prompt"`
+	SystemPrompt string `json:"system_prompt,omitempty"`
+	ModelAID     string `json:"model_a_id"`
+	ModelBID     string `json:"model_b_id"`
+	Rubric       string `json:"rubric,omitempty"`
+}
+
+func (s *Server) handleQuickBattle(w http.ResponseWriter, r *http.Request) {
+	var req quickBattleRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if req.Prompt == "" || req.ModelAID == "" || req.ModelBID == "" {
+		http.Error(w, "prompt, model_a_id, and model_b_id are required", http.StatusBadRequest)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 60*time.Second)
+	defer cancel()
+
+	compReq := provider.CompletionRequest{
+		Prompt:       req.Prompt,
+		SystemPrompt: req.SystemPrompt,
+		Temperature:  0.7,
+	}
+
+	respA, respB, err := s.pool.DispatchPair(ctx, req.ModelAID, req.ModelBID, compReq)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("generation error: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	rubric := req.Rubric
+	if rubric == "" {
+		rubric = s.cfg.Judge.RubricContent
+	}
+
+	judgeClient := s.pool.GetJudge()
+	judgeResult, err := judge.EvaluateDebiased(
+		ctx,
+		judgeClient,
+		req.ModelAID,
+		req.ModelBID,
+		req.Prompt,
+		respA.Text,
+		respB.Text,
+		rubric,
+		s.cfg.Judge.Temperature,
+		s.cfg.Judge.DebiasPosition,
+	)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("judge error: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// Persist as a quick battle match
+	matchID := fmt.Sprintf("quick_%d", time.Now().UnixNano())
+	matchRecord := &tournament.MatchRecord{
+		ID:                   matchID,
+		TournamentID:         s.cfg.Tournament.Name,
+		PromptID:             "ad_hoc_prompt",
+		Category:             "quick_battle",
+		PromptText:           req.Prompt,
+		RoundNum:             1,
+		ModelAID:             req.ModelAID,
+		ModelBID:             req.ModelBID,
+		ResponseA:            respA.Text,
+		ResponseB:            respB.Text,
+		LatencyAMs:           respA.LatencyMs,
+		LatencyBMs:           respB.LatencyMs,
+		CostA:                respA.TotalCost,
+		CostB:                respB.TotalCost,
+		TokensA:              respA.InputTokens + respA.OutputTokens,
+		TokensB:              respB.InputTokens + respB.OutputTokens,
+		Pass1Winner:          judgeResult.Pass1Winner,
+		Pass1Reasoning:       judgeResult.Pass1Reasoning,
+		Pass2Winner:          judgeResult.Pass2Winner,
+		Pass2Reasoning:       judgeResult.Pass2Reasoning,
+		FinalWinner:          judgeResult.FinalWinner,
+		PositionBiasDetected: judgeResult.PositionBiasDetected,
+		CreatedAt:            time.Now(),
+	}
+
+	_ = s.store.SaveMatch(matchRecord)
+	s.bus.Publish("match_finish", matchRecord)
+
+	result := map[string]interface{}{
+		"match_id":               matchID,
+		"model_a_id":             req.ModelAID,
+		"model_b_id":             req.ModelBID,
+		"response_a":             respA.Text,
+		"response_b":             respB.Text,
+		"latency_a_ms":           respA.LatencyMs,
+		"latency_b_ms":           respB.LatencyMs,
+		"cost_a":                 respA.TotalCost,
+		"cost_b":                 respB.TotalCost,
+		"tokens_a":               respA.InputTokens + respA.OutputTokens,
+		"tokens_b":               respB.InputTokens + respB.OutputTokens,
+		"pass1_winner":           judgeResult.Pass1Winner,
+		"pass1_reasoning":        judgeResult.Pass1Reasoning,
+		"pass2_winner":           judgeResult.Pass2Winner,
+		"pass2_reasoning":        judgeResult.Pass2Reasoning,
+		"final_winner":           judgeResult.FinalWinner,
+		"position_bias_detected": judgeResult.PositionBiasDetected,
+	}
+
+	writeJSON(w, http.StatusOK, result)
 }
 
 func (s *Server) handleTournamentStart(w http.ResponseWriter, r *http.Request) {
@@ -228,7 +393,7 @@ func (s *Server) handleTournamentStart(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		ratings, _ := s.computeCurrentRatings()
+		ratings, _ := s.computeCurrentRatings("")
 		s.bus.Publish("tournament_complete", ratings)
 	}()
 
@@ -238,8 +403,8 @@ func (s *Server) handleTournamentStart(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (s *Server) computeCurrentRatings() ([]elo.ModelRating, error) {
-	matches, err := s.store.GetMatches(s.cfg.Tournament.Name)
+func (s *Server) computeCurrentRatings(category string) ([]elo.ModelRating, error) {
+	matches, err := s.store.GetMatches(s.cfg.Tournament.Name, category)
 	if err != nil {
 		return nil, err
 	}

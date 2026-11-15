@@ -278,3 +278,12 @@ evalarena/
 - [x] 9.4 End-to-end tournament run verification with simulation models
 - [x] 9.5 Memory benchmark verification confirming < 25MB RAM footprint (measured 15.87 MB)
 - [x] 9.6 Commit and push to GitHub repository
+
+### Phase 10: Advanced Enterprise Usability & Reliability Features
+- [x] 10.1 Implement Category Slice ELO (Sub-domain Leaderboards) with category filtering in backend and CLI
+- [x] 10.2 Implement LLM Judge Calibration Engine (Cohen's Kappa and Observed vs Expected Human-Judge Alignment)
+- [x] 10.3 Implement Multi-Turn Conversation Evaluation across dataset parser, providers, and judges
+- [x] 10.4 Implement "Quick Battle" live ad-hoc playground endpoint and React 19 testing interface
+- [x] 10.5 Implement Visual Side-by-Side Word/Token Diff Toggle in Blind Arena and Match Inspector
+- [x] 10.6 Update React 19 Studio with Quick Battle, Category Filtering, Calibration Scorecard, and Diff Mode
+- [x] 10.7 End-to-end test suite and verification for all Phase 10 features

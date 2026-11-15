@@ -1,9 +1,9 @@
 import React from 'react';
-import { Play, RefreshCw, Trophy, EyeOff, Grid, ListFilter, Activity } from 'lucide-react';
+import { Play, RefreshCw, Trophy, EyeOff, Grid, ListFilter, Activity, Swords } from 'lucide-react';
 
 interface Props {
-  activeTab: 'leaderboard' | 'arena' | 'matrix' | 'matches';
-  setActiveTab: (tab: 'leaderboard' | 'arena' | 'matrix' | 'matches') => void;
+  activeTab: 'leaderboard' | 'arena' | 'quickbattle' | 'matrix' | 'matches';
+  setActiveTab: (tab: 'leaderboard' | 'arena' | 'quickbattle' | 'matrix' | 'matches') => void;
   onRunTournament: () => void;
   isRunning: boolean;
   totalMatches: number;
@@ -59,17 +59,17 @@ export const Header: React.FC<Props> = ({ activeTab, setActiveTab, onRunTourname
         </div>
 
         {/* Tab Navigation */}
-        <nav style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'var(--bg-main)', padding: '0.25rem', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+        <nav style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'var(--bg-main)', padding: '0.25rem', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
           <button
             onClick={() => setActiveTab('leaderboard')}
             style={{
-              padding: '0.45rem 0.85rem',
+              padding: '0.45rem 0.8rem',
               borderRadius: '6px',
               border: 'none',
               background: activeTab === 'leaderboard' ? 'var(--bg-subtle)' : 'transparent',
               color: activeTab === 'leaderboard' ? '#ffffff' : 'var(--text-muted)',
               fontWeight: 600,
-              fontSize: '0.85rem',
+              fontSize: '0.82rem',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
@@ -83,13 +83,13 @@ export const Header: React.FC<Props> = ({ activeTab, setActiveTab, onRunTourname
           <button
             onClick={() => setActiveTab('arena')}
             style={{
-              padding: '0.45rem 0.85rem',
+              padding: '0.45rem 0.8rem',
               borderRadius: '6px',
               border: 'none',
               background: activeTab === 'arena' ? 'var(--bg-subtle)' : 'transparent',
               color: activeTab === 'arena' ? '#ffffff' : 'var(--text-muted)',
               fontWeight: 600,
-              fontSize: '0.85rem',
+              fontSize: '0.82rem',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
@@ -101,15 +101,35 @@ export const Header: React.FC<Props> = ({ activeTab, setActiveTab, onRunTourname
           </button>
 
           <button
+            onClick={() => setActiveTab('quickbattle')}
+            style={{
+              padding: '0.45rem 0.8rem',
+              borderRadius: '6px',
+              border: 'none',
+              background: activeTab === 'quickbattle' ? 'var(--bg-subtle)' : 'transparent',
+              color: activeTab === 'quickbattle' ? '#ffffff' : 'var(--text-muted)',
+              fontWeight: 600,
+              fontSize: '0.82rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            <Swords style={{ width: 14, height: 14 }} /> Quick Battle
+          </button>
+
+          <button
             onClick={() => setActiveTab('matrix')}
             style={{
-              padding: '0.45rem 0.85rem',
+              padding: '0.45rem 0.8rem',
               borderRadius: '6px',
               border: 'none',
               background: activeTab === 'matrix' ? 'var(--bg-subtle)' : 'transparent',
               color: activeTab === 'matrix' ? '#ffffff' : 'var(--text-muted)',
               fontWeight: 600,
-              fontSize: '0.85rem',
+              fontSize: '0.82rem',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
@@ -117,19 +137,19 @@ export const Header: React.FC<Props> = ({ activeTab, setActiveTab, onRunTourname
               transition: 'all 0.15s ease',
             }}
           >
-            <Grid style={{ width: 14, height: 14 }} /> Win-Rate Matrix
+            <Grid style={{ width: 14, height: 14 }} /> Win Matrix
           </button>
 
           <button
             onClick={() => setActiveTab('matches')}
             style={{
-              padding: '0.45rem 0.85rem',
+              padding: '0.45rem 0.8rem',
               borderRadius: '6px',
               border: 'none',
               background: activeTab === 'matches' ? 'var(--bg-subtle)' : 'transparent',
               color: activeTab === 'matches' ? '#ffffff' : 'var(--text-muted)',
               fontWeight: 600,
-              fontSize: '0.85rem',
+              fontSize: '0.82rem',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
@@ -137,7 +157,7 @@ export const Header: React.FC<Props> = ({ activeTab, setActiveTab, onRunTourname
               transition: 'all 0.15s ease',
             }}
           >
-            <ListFilter style={{ width: 14, height: 14 }} /> Match Inspector
+            <ListFilter style={{ width: 14, height: 14 }} /> Inspector
           </button>
         </nav>
 

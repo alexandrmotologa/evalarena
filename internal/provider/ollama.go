@@ -64,9 +64,18 @@ type ollamaResponse struct {
 func (c *OllamaClient) Generate(ctx context.Context, req CompletionRequest) (*CompletionResponse, error) {
 	url := fmt.Sprintf("%s/api/generate", c.endpoint)
 
+	prompt := req.Prompt
+	if len(req.Messages) > 0 {
+		var sb strings.Builder
+		for _, m := range req.Messages {
+			sb.WriteString(fmt.Sprintf("%s: %s\n", strings.Title(m.Role), m.Content))
+		}
+		prompt = sb.String()
+	}
+
 	payload := ollamaRequest{
 		Model:  c.model,
-		Prompt: req.Prompt,
+		Prompt: prompt,
 		System: req.SystemPrompt,
 		Stream: false,
 		Options: map[string]interface{}{

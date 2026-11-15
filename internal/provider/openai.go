@@ -84,7 +84,17 @@ func (c *OpenAIClient) Generate(ctx context.Context, req CompletionRequest) (*Co
 	if req.SystemPrompt != "" {
 		messages = append(messages, openAIMessage{Role: "system", Content: req.SystemPrompt})
 	}
-	messages = append(messages, openAIMessage{Role: "user", Content: req.Prompt})
+	if len(req.Messages) > 0 {
+		for _, m := range req.Messages {
+			role := m.Role
+			if role == "" {
+				role = "user"
+			}
+			messages = append(messages, openAIMessage{Role: role, Content: m.Content})
+		}
+	} else {
+		messages = append(messages, openAIMessage{Role: "user", Content: req.Prompt})
+	}
 
 	payload := openAIRequest{
 		Model:       c.model,

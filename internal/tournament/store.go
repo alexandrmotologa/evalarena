@@ -15,6 +15,7 @@ type MatchRecord struct {
 	ID                   string     `json:"id"`
 	TournamentID         string     `json:"tournament_id"`
 	PromptID             string     `json:"prompt_id"`
+	Category             string     `json:"category"`
 	PromptText           string     `json:"prompt_text"`
 	RoundNum             int        `json:"round_num"`
 	ModelAID             string     `json:"model_a_id"`
@@ -94,6 +95,7 @@ func (s *Store) migrate() error {
 			id TEXT PRIMARY KEY,
 			tournament_id TEXT NOT NULL,
 			prompt_id TEXT NOT NULL,
+			category TEXT NOT NULL DEFAULT '',
 			prompt_text TEXT NOT NULL,
 			round_num INTEGER NOT NULL,
 			model_a_id TEXT NOT NULL,
@@ -143,6 +145,9 @@ func (s *Store) migrate() error {
 		}
 	}
 
+	// Graceful column addition if table existed without category
+	_, _ = s.db.Exec(`ALTER TABLE matches ADD COLUMN category TEXT NOT NULL DEFAULT ''`)
+
 	return nil
 }
 
@@ -157,19 +162,20 @@ func (s *Store) Close() error {
 // SaveMatch persists or updates a pairwise match record.
 func (s *Store) SaveMatch(m *MatchRecord) error {
 	query := `INSERT INTO matches (
-		id, tournament_id, prompt_id, prompt_text, round_num,
+		id, tournament_id, prompt_id, category, prompt_text, round_num,
 		model_a_id, model_b_id, response_a, response_b,
 		latency_a_ms, latency_b_ms, cost_a, cost_b, tokens_a, tokens_b,
 		pass1_winner, pass1_reasoning, pass2_winner, pass2_reasoning,
 		final_winner, position_bias_detected, human_vote, human_voted_at, created_at
-	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	ON CONFLICT(id) DO UPDATE SET
+		category=excluded.category,
 		human_vote=excluded.human_vote,
 		human_voted_at=excluded.human_voted_at,
 		final_winner=excluded.final_winner`
 
 	_, err := s.db.Exec(query,
-		m.ID, m.TournamentID, m.PromptID, m.PromptText, m.RoundNum,
+		m.ID, m.TournamentID, m.PromptID, m.Category, m.PromptText, m.RoundNum,
 		m.ModelAID, m.ModelBID, m.ResponseA, m.ResponseB,
 		m.LatencyAMs, m.LatencyBMs, m.CostA, m.CostB, m.TokensA, m.TokensB,
 		m.Pass1Winner, m.Pass1Reasoning, m.Pass2Winner, m.Pass2Reasoning,
@@ -182,17 +188,19 @@ func (s *Store) SaveMatch(m *MatchRecord) error {
 	return nil
 }
 
-// GetMatches returns all recorded matches for a tournament.
-func (s *Store) GetMatches(tournamentID string) ([]MatchRecord, error) {
+// GetMatches returns all recorded matches for a tournament, optionally filtered by category.
+func (s *Store) GetMatches(tournamentID string, category string) ([]MatchRecord, error) {
 	query := `SELECT 
-		id, tournament_id, prompt_id, prompt_text, round_num,
+		id, tournament_id, prompt_id, category, prompt_text, round_num,
 		model_a_id, model_b_id, response_a, response_b,
 		latency_a_ms, latency_b_ms, cost_a, cost_b, tokens_a, tokens_b,
 		pass1_winner, pass1_reasoning, pass2_winner, pass2_reasoning,
 		final_winner, position_bias_detected, human_vote, human_voted_at, created_at
-	FROM matches WHERE tournament_id = ? ORDER BY round_num ASC, created_at ASC`
+	FROM matches 
+	WHERE (tournament_id = ? OR ? = '') AND (category = ? OR ? = '')
+	ORDER BY round_num ASC, created_at ASC`
 
-	rows, err := s.db.Query(query, tournamentID)
+	rows, err := s.db.Query(query, tournamentID, tournamentID, category, category)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query matches: %w", err)
 	}
@@ -205,7 +213,7 @@ func (s *Store) GetMatches(tournamentID string) ([]MatchRecord, error) {
 		var humanVotedAt sql.NullTime
 
 		err := rows.Scan(
-			&m.ID, &m.TournamentID, &m.PromptID, &m.PromptText, &m.RoundNum,
+			&m.ID, &m.TournamentID, &m.PromptID, &m.Category, &m.PromptText, &m.RoundNum,
 			&m.ModelAID, &m.ModelBID, &m.ResponseA, &m.ResponseB,
 			&m.LatencyAMs, &m.LatencyBMs, &m.CostA, &m.CostB, &m.TokensA, &m.TokensB,
 			&m.Pass1Winner, &m.Pass1Reasoning, &m.Pass2Winner, &m.Pass2Reasoning,
@@ -228,10 +236,30 @@ func (s *Store) GetMatches(tournamentID string) ([]MatchRecord, error) {
 	return matches, nil
 }
 
+// GetCategories returns all distinct categories present in recorded matches.
+func (s *Store) GetCategories(tournamentID string) ([]string, error) {
+	query := `SELECT DISTINCT category FROM matches WHERE (tournament_id = ? OR ? = '') AND category != '' ORDER BY category ASC`
+	rows, err := s.db.Query(query, tournamentID, tournamentID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query categories: %w", err)
+	}
+	defer rows.Close()
+
+	var categories []string
+	for rows.Next() {
+		var cat string
+		if err := rows.Scan(&cat); err != nil {
+			return nil, err
+		}
+		categories = append(categories, cat)
+	}
+	return categories, nil
+}
+
 // GetUnvotedMatch returns a random match waiting for human blind evaluation.
 func (s *Store) GetUnvotedMatch(tournamentID string) (*MatchRecord, error) {
 	query := `SELECT 
-		id, tournament_id, prompt_id, prompt_text, round_num,
+		id, tournament_id, prompt_id, category, prompt_text, round_num,
 		model_a_id, model_b_id, response_a, response_b,
 		latency_a_ms, latency_b_ms, cost_a, cost_b, tokens_a, tokens_b,
 		pass1_winner, pass1_reasoning, pass2_winner, pass2_reasoning,
@@ -243,7 +271,7 @@ func (s *Store) GetUnvotedMatch(tournamentID string) (*MatchRecord, error) {
 	row := s.db.QueryRow(query, tournamentID, tournamentID)
 	var m MatchRecord
 	err := row.Scan(
-		&m.ID, &m.TournamentID, &m.PromptID, &m.PromptText, &m.RoundNum,
+		&m.ID, &m.TournamentID, &m.PromptID, &m.Category, &m.PromptText, &m.RoundNum,
 		&m.ModelAID, &m.ModelBID, &m.ResponseA, &m.ResponseB,
 		&m.LatencyAMs, &m.LatencyBMs, &m.CostA, &m.CostB, &m.TokensA, &m.TokensB,
 		&m.Pass1Winner, &m.Pass1Reasoning, &m.Pass2Winner, &m.Pass2Reasoning,
@@ -252,7 +280,7 @@ func (s *Store) GetUnvotedMatch(tournamentID string) (*MatchRecord, error) {
 	if err == sql.ErrNoRows {
 		// If all have votes, return any random match for arena practice
 		fallbackQuery := `SELECT 
-			id, tournament_id, prompt_id, prompt_text, round_num,
+			id, tournament_id, prompt_id, category, prompt_text, round_num,
 			model_a_id, model_b_id, response_a, response_b,
 			latency_a_ms, latency_b_ms, cost_a, cost_b, tokens_a, tokens_b,
 			pass1_winner, pass1_reasoning, pass2_winner, pass2_reasoning,
@@ -263,7 +291,7 @@ func (s *Store) GetUnvotedMatch(tournamentID string) (*MatchRecord, error) {
 
 		fbRow := s.db.QueryRow(fallbackQuery, tournamentID, tournamentID)
 		if fbErr := fbRow.Scan(
-			&m.ID, &m.TournamentID, &m.PromptID, &m.PromptText, &m.RoundNum,
+			&m.ID, &m.TournamentID, &m.PromptID, &m.Category, &m.PromptText, &m.RoundNum,
 			&m.ModelAID, &m.ModelBID, &m.ResponseA, &m.ResponseB,
 			&m.LatencyAMs, &m.LatencyBMs, &m.CostA, &m.CostB, &m.TokensA, &m.TokensB,
 			&m.Pass1Winner, &m.Pass1Reasoning, &m.Pass2Winner, &m.Pass2Reasoning,
@@ -295,7 +323,7 @@ func (s *Store) RecordHumanVote(matchID string, vote string) (*MatchRecord, erro
 	// Fetch updated record
 	var m MatchRecord
 	selQuery := `SELECT 
-		id, tournament_id, prompt_id, prompt_text, round_num,
+		id, tournament_id, prompt_id, category, prompt_text, round_num,
 		model_a_id, model_b_id, response_a, response_b,
 		latency_a_ms, latency_b_ms, cost_a, cost_b, tokens_a, tokens_b,
 		pass1_winner, pass1_reasoning, pass2_winner, pass2_reasoning,
@@ -304,7 +332,7 @@ func (s *Store) RecordHumanVote(matchID string, vote string) (*MatchRecord, erro
 	row := s.db.QueryRow(selQuery, matchID)
 	var hVote sql.NullString
 	if err := row.Scan(
-		&m.ID, &m.TournamentID, &m.PromptID, &m.PromptText, &m.RoundNum,
+		&m.ID, &m.TournamentID, &m.PromptID, &m.Category, &m.PromptText, &m.RoundNum,
 		&m.ModelAID, &m.ModelBID, &m.ResponseA, &m.ResponseB,
 		&m.LatencyAMs, &m.LatencyBMs, &m.CostA, &m.CostB, &m.TokensA, &m.TokensB,
 		&m.Pass1Winner, &m.Pass1Reasoning, &m.Pass2Winner, &m.Pass2Reasoning,

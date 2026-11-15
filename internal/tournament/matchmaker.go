@@ -5,6 +5,8 @@ import (
 	"math/rand"
 	"sort"
 	"time"
+
+	"github.com/alexandrmotologa/evalarena/internal/provider"
 )
 
 // ScheduledMatch represents an allocated battle pairing ready for execution.
@@ -12,7 +14,9 @@ type ScheduledMatch struct {
 	ID         string
 	RoundNum   int
 	PromptID   string
+	Category   string
 	PromptText string
+	Messages   []provider.Message
 	ModelAID   string
 	ModelBID   string
 }
@@ -30,7 +34,9 @@ func GenerateRoundRobin(modelIDs []string, prompts []PromptRef, rounds int) []Sc
 						ID:         fmt.Sprintf("m_%06d", matchIndex),
 						RoundNum:   r,
 						PromptID:   p.ID,
+						Category:   p.Category,
 						PromptText: p.Text,
+						Messages:   p.Messages,
 						ModelAID:   modelIDs[i],
 						ModelBID:   modelIDs[j],
 					})
@@ -76,7 +82,9 @@ func GenerateSwiss(modelIDs []string, prompts []PromptRef, roundNum int, ratings
 				ID:         fmt.Sprintf("m_r%d_%04d", roundNum, matchIndex),
 				RoundNum:   roundNum,
 				PromptID:   p.ID,
+				Category:   p.Category,
 				PromptText: p.Text,
+				Messages:   p.Messages,
 				ModelAID:   mA,
 				ModelBID:   mB,
 			})
@@ -105,7 +113,9 @@ func GenerateRandom(modelIDs []string, prompts []PromptRef, totalMatches int) []
 			ID:         fmt.Sprintf("m_rnd_%04d", i),
 			RoundNum:   1,
 			PromptID:   prompt.ID,
+			Category:   prompt.Category,
 			PromptText: prompt.Text,
+			Messages:   prompt.Messages,
 			ModelAID:   modelIDs[idxA],
 			ModelBID:   modelIDs[idxB],
 		})
@@ -116,6 +126,8 @@ func GenerateRandom(modelIDs []string, prompts []PromptRef, totalMatches int) []
 
 // PromptRef provides a lightweight reference to a benchmark prompt.
 type PromptRef struct {
-	ID   string
-	Text string
+	ID       string
+	Category string
+	Text     string
+	Messages []provider.Message
 }

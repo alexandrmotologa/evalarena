@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { MatchRecord } from '../api/client';
-import { ListFilter, ChevronDown, ChevronRight, ShieldAlert, CheckCircle2, Clock, DollarSign } from 'lucide-react';
+import { ListFilter, ChevronDown, ChevronRight, ShieldAlert, CheckCircle2, SplitSquareVertical } from 'lucide-react';
+import { computeWordDiff } from '../utils/diff';
 
 interface Props {
   matches: MatchRecord[];
@@ -9,6 +10,7 @@ interface Props {
 export const MatchInspector: React.FC<Props> = ({ matches }) => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [filterBiasOnly, setFilterBiasOnly] = useState<boolean>(false);
+  const [diffMode, setDiffMode] = useState<boolean>(false);
 
   const displayedMatches = filterBiasOnly
     ? matches.filter(m => m.position_bias_detected)
@@ -39,20 +41,43 @@ export const MatchInspector: React.FC<Props> = ({ matches }) => {
           </p>
         </div>
 
-        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', cursor: 'pointer', color: 'var(--text-muted)' }}>
-          <input
-            type="checkbox"
-            checked={filterBiasOnly}
-            onChange={(e) => setFilterBiasOnly(e.target.checked)}
-            style={{ accentColor: 'var(--warning)', cursor: 'pointer' }}
-          />
-          Show only Position-Biased Inconsistencies ({matches.filter(m => m.position_bias_detected).length})
-        </label>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <button
+            onClick={() => setDiffMode(!diffMode)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              fontSize: '0.75rem',
+              padding: '0.35rem 0.75rem',
+              borderRadius: '4px',
+              background: diffMode ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.04)',
+              color: diffMode ? 'var(--accent-light)' : 'var(--text-muted)',
+              border: diffMode ? '1px solid var(--accent)' : '1px solid var(--border-subtle)',
+              cursor: 'pointer',
+              fontWeight: 600,
+            }}
+          >
+            <SplitSquareVertical style={{ width: 14, height: 14 }} />
+            {diffMode ? 'Diff Active' : 'Toggle Diff'}
+          </button>
+
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', cursor: 'pointer', color: 'var(--text-muted)' }}>
+            <input
+              type="checkbox"
+              checked={filterBiasOnly}
+              onChange={(e) => setFilterBiasOnly(e.target.checked)}
+              style={{ accentColor: 'var(--warning)', cursor: 'pointer' }}
+            />
+            Show only Position Biases ({matches.filter(m => m.position_bias_detected).length})
+          </label>
+        </div>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
         {displayedMatches.map((m) => {
           const isExpanded = expandedId === m.id;
+          const diffResult = isExpanded && diffMode ? computeWordDiff(m.response_a, m.response_b) : null;
 
           return (
             <div
@@ -84,6 +109,11 @@ export const MatchInspector: React.FC<Props> = ({ matches }) => {
                   <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }} className="font-mono">
                     [{m.prompt_id}]
                   </span>
+                  {m.category && (
+                    <span style={{ fontSize: '0.7rem', color: 'var(--accent-light)', background: 'rgba(99, 102, 241, 0.12)', padding: '0.15rem 0.45rem', borderRadius: '4px' }}>
+                      {m.category}
+                    </span>
+                  )}
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.8rem' }}>
@@ -123,20 +153,50 @@ export const MatchInspector: React.FC<Props> = ({ matches }) => {
                     <div style={{ background: 'rgba(0,0,0,0.15)', padding: '0.85rem', borderRadius: '6px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem', fontSize: '0.8rem', fontWeight: 600, color: 'var(--accent-light)' }}>
                         <span>{m.model_a_id}</span>
-                        <span className="font-mono">{m.latency_a_ms}ms · {m.tokens_a} tok</span>
+                        <span className="font-mono">{m.latency_a_ms}ms · {m.tokens_a} tok · ${m.cost_a.toFixed(5)}</span>
                       </div>
                       <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
-                        {m.response_a}
+                        {diffMode && diffResult ? (
+                          diffResult.diffA.map((t, idx) => (
+                            <span
+                              key={idx}
+                              style={{
+                                background: t.type === 'removed' ? 'rgba(239,68,68,0.2)' : 'transparent',
+                                color: t.type === 'removed' ? '#fca5a5' : 'inherit',
+                                borderRadius: 2,
+                              }}
+                            >
+                              {t.value}
+                            </span>
+                          ))
+                        ) : (
+                          m.response_a
+                        )}
                       </div>
                     </div>
 
                     <div style={{ background: 'rgba(0,0,0,0.15)', padding: '0.85rem', borderRadius: '6px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem', fontSize: '0.8rem', fontWeight: 600, color: 'var(--accent-light)' }}>
                         <span>{m.model_b_id}</span>
-                        <span className="font-mono">{m.latency_b_ms}ms · {m.tokens_b} tok</span>
+                        <span className="font-mono">{m.latency_b_ms}ms · {m.tokens_b} tok · ${m.cost_b.toFixed(5)}</span>
                       </div>
                       <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
-                        {m.response_b}
+                        {diffMode && diffResult ? (
+                          diffResult.diffB.map((t, idx) => (
+                            <span
+                              key={idx}
+                              style={{
+                                background: t.type === 'added' ? 'rgba(16,185,129,0.2)' : 'transparent',
+                                color: t.type === 'added' ? '#6ee7b7' : 'inherit',
+                                borderRadius: 2,
+                              }}
+                            >
+                              {t.value}
+                            </span>
+                          ))
+                        ) : (
+                          m.response_b
+                        )}
                       </div>
                     </div>
                   </div>

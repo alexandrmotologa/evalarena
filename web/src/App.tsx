@@ -3,6 +3,7 @@ import { Header } from './components/Header';
 import { LeaderboardTable } from './components/LeaderboardTable';
 import { ParetoFrontier } from './components/ParetoFrontier';
 import { BlindArenaVote } from './components/BlindArenaVote';
+import { QuickBattle } from './components/QuickBattle';
 import { WinRateHeatmap } from './components/WinRateHeatmap';
 import { MatchInspector } from './components/MatchInspector';
 import {
@@ -11,32 +12,40 @@ import {
   ParetoPoint,
   Recommendation,
   MatchRecord,
+  CalibrationReport,
   fetchLeaderboard,
   fetchMatrix,
   fetchPareto,
   fetchMatches,
+  fetchCategories,
+  fetchCalibration,
   startTournament,
   subscribeToEvents,
 } from './api/client';
 
 export const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'leaderboard' | 'arena' | 'matrix' | 'matches'>('leaderboard');
+  const [activeTab, setActiveTab] = useState<'leaderboard' | 'arena' | 'quickbattle' | 'matrix' | 'matches'>('leaderboard');
   const [ratings, setRatings] = useState<ModelRating[]>([]);
   const [matrix, setMatrix] = useState<WinRateMatrix | null>(null);
   const [paretoPoints, setParetoPoints] = useState<ParetoPoint[]>([]);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [matches, setMatches] = useState<MatchRecord[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [calibration, setCalibration] = useState<CalibrationReport | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [isRunning, setIsRunning] = useState<boolean>(false);
   const [notification, setNotification] = useState<string | null>(null);
 
-  const loadAllData = async () => {
+  const loadAllData = async (cat: string = selectedCategory) => {
     try {
-      const [lb, mtx, par, mtchs] = await Promise.all([
-        fetchLeaderboard().catch(() => []),
-        fetchMatrix().catch(() => null),
-        fetchPareto().catch(() => ({ points: [], recommendations: [] })),
-        fetchMatches().catch(() => []),
+      const [lb, mtx, par, mtchs, cats, cal] = await Promise.all([
+        fetchLeaderboard(cat).catch(() => []),
+        fetchMatrix(cat).catch(() => null),
+        fetchPareto(cat).catch(() => ({ points: [], recommendations: [] })),
+        fetchMatches(cat).catch(() => []),
+        fetchCategories().catch(() => []),
+        fetchCalibration().catch(() => null),
       ]);
 
       setRatings(lb);
@@ -44,6 +53,8 @@ export const App: React.FC = () => {
       setParetoPoints(par.points || []);
       setRecommendations(par.recommendations || []);
       setMatches(mtchs);
+      setCategories(cats);
+      setCalibration(cal);
     } catch (err) {
       console.error('Error fetching tournament data:', err);
     } finally {
@@ -52,26 +63,33 @@ export const App: React.FC = () => {
   };
 
   useEffect(() => {
-    loadAllData();
+    loadAllData(selectedCategory);
 
     // Subscribe to real-time Server-Sent Events
     const unsubscribe = subscribeToEvents((event) => {
       if (event.type === 'match_start') {
         setNotification(`Round in progress: ${event.payload.model_a} vs ${event.payload.model_b}`);
       } else if (event.type === 'match_finish') {
-        loadAllData();
+        loadAllData(selectedCategory);
       } else if (event.type === 'tournament_complete') {
         setIsRunning(false);
         setNotification('Tournament round completed successfully!');
-        loadAllData();
+        loadAllData(selectedCategory);
         setTimeout(() => setNotification(null), 5000);
+      } else if (event.type === 'human_vote') {
+        fetchCalibration().then(setCalibration).catch(() => {});
       }
     });
 
     return () => {
       unsubscribe();
     };
-  }, []);
+  }, [selectedCategory]);
+
+  const handleSelectCategory = (cat: string) => {
+    setSelectedCategory(cat);
+    loadAllData(cat);
+  };
 
   const handleRunTournament = async () => {
     if (isRunning) return;
@@ -84,6 +102,8 @@ export const App: React.FC = () => {
       setIsRunning(false);
     }
   };
+
+  const modelIDs = ratings.map(r => r.model_id);
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -115,13 +135,26 @@ export const App: React.FC = () => {
         {activeTab === 'leaderboard' && (
           <div>
             <ParetoFrontier points={paretoPoints} recommendations={recommendations} />
-            <LeaderboardTable ratings={ratings} loading={loading} />
+            <LeaderboardTable
+              ratings={ratings}
+              loading={loading}
+              categories={categories}
+              selectedCategory={selectedCategory}
+              onSelectCategory={handleSelectCategory}
+              calibration={calibration}
+            />
           </div>
         )}
 
         {activeTab === 'arena' && (
           <div>
             <BlindArenaVote />
+          </div>
+        )}
+
+        {activeTab === 'quickbattle' && (
+          <div>
+            <QuickBattle models={modelIDs} />
           </div>
         )}
 

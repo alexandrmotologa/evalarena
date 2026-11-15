@@ -5,13 +5,20 @@ import (
 	"time"
 )
 
+// Message represents a single chat turn in multi-turn completions.
+type Message struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
+}
+
 // CompletionRequest defines prompt input parameters for a model.
 type CompletionRequest struct {
-	Prompt        string   `json:"prompt"`
-	SystemPrompt  string   `json:"system_prompt,omitempty"`
-	Temperature   float64  `json:"temperature"`
-	MaxTokens     int      `json:"max_tokens,omitempty"`
-	StopSequences []string `json:"stop_sequences,omitempty"`
+	Prompt        string    `json:"prompt"`
+	SystemPrompt  string    `json:"system_prompt,omitempty"`
+	Messages      []Message `json:"messages,omitempty"`
+	Temperature   float64   `json:"temperature"`
+	MaxTokens     int       `json:"max_tokens,omitempty"`
+	StopSequences []string  `json:"stop_sequences,omitempty"`
 }
 
 // CompletionResponse encapsulates generation outputs, timing, and token metrics.

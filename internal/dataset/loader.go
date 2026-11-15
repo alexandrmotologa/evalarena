@@ -13,14 +13,35 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// Message represents an individual conversational turn in multi-turn dialogues.
+type Message struct {
+	Role    string `json:"role" yaml:"role"` // "system", "user", "assistant"
+	Content string `json:"content" yaml:"content"`
+}
+
 // Item represents a single benchmark evaluation prompt case.
 type Item struct {
 	ID           string                 `json:"id" yaml:"id"`
 	Category     string                 `json:"category" yaml:"category"`
 	Prompt       string                 `json:"prompt" yaml:"prompt"`
 	SystemPrompt string                 `json:"system_prompt,omitempty" yaml:"system_prompt,omitempty"`
+	Messages     []Message              `json:"messages,omitempty" yaml:"messages,omitempty"`
 	Reference    string                 `json:"reference,omitempty" yaml:"reference,omitempty"`
 	Metadata     map[string]interface{} `json:"metadata,omitempty" yaml:"metadata,omitempty"`
+}
+
+// Normalize ensures Prompt and Messages are synchronized for single-turn or multi-turn execution.
+func (it *Item) Normalize() {
+	if it.Category == "" {
+		it.Category = "general"
+	}
+	if len(it.Messages) == 0 && it.Prompt != "" {
+		it.Messages = []Message{
+			{Role: "user", Content: it.Prompt},
+		}
+	} else if len(it.Messages) > 0 && it.Prompt == "" {
+		it.Prompt = it.Messages[len(it.Messages)-1].Content
+	}
 }
 
 // LoadDataset reads benchmark test cases from JSONL, CSV, or YAML formats.
@@ -69,7 +90,8 @@ func loadJSONL(r io.Reader) ([]Item, error) {
 		if item.ID == "" {
 			item.ID = fmt.Sprintf("prompt_%04d", lineNum)
 		}
-		if strings.TrimSpace(item.Prompt) == "" {
+		item.Normalize()
+		if strings.TrimSpace(item.Prompt) == "" && len(item.Messages) == 0 {
 			return nil, fmt.Errorf("line %d: empty prompt text", lineNum)
 		}
 
@@ -140,6 +162,7 @@ func loadCSV(r io.Reader) ([]Item, error) {
 		if hasSys && sysIdx < len(row) {
 			item.SystemPrompt = strings.TrimSpace(row[sysIdx])
 		}
+		item.Normalize()
 
 		items = append(items, item)
 	}
@@ -162,7 +185,8 @@ func loadYAML(r io.Reader) ([]Item, error) {
 		if items[i].ID == "" {
 			items[i].ID = fmt.Sprintf("prompt_%04d", i+1)
 		}
-		if strings.TrimSpace(items[i].Prompt) == "" {
+		items[i].Normalize()
+		if strings.TrimSpace(items[i].Prompt) == "" && len(items[i].Messages) == 0 {
 			return nil, fmt.Errorf("item %d: empty prompt text", i+1)
 		}
 	}

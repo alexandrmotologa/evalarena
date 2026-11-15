@@ -22,6 +22,7 @@ func TestStore_MatchesAndLeaderboard(t *testing.T) {
 		ID:                   "m_001",
 		TournamentID:         "tourney_1",
 		PromptID:             "p_001",
+		Category:             "support_policy",
 		PromptText:           "Test prompt",
 		RoundNum:             1,
 		ModelAID:             "gpt-4o",
@@ -47,7 +48,7 @@ func TestStore_MatchesAndLeaderboard(t *testing.T) {
 		t.Fatalf("failed to save match: %v", err)
 	}
 
-	matches, err := store.GetMatches("tourney_1")
+	matches, err := store.GetMatches("tourney_1", "")
 	if err != nil {
 		t.Fatalf("failed to get matches: %v", err)
 	}
@@ -56,6 +57,14 @@ func TestStore_MatchesAndLeaderboard(t *testing.T) {
 	}
 	if matches[0].FinalWinner != "gpt-4o" {
 		t.Errorf("expected final winner gpt-4o, got %s", matches[0].FinalWinner)
+	}
+
+	cats, err := store.GetCategories("tourney_1")
+	if err != nil {
+		t.Fatalf("failed to get categories: %v", err)
+	}
+	if len(cats) != 1 || cats[0] != "support_policy" {
+		t.Errorf("unexpected categories: %+v", cats)
 	}
 
 	// Human voting

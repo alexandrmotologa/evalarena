@@ -49,9 +49,15 @@ func (r *Runner) Run(ctx context.Context) ([]MatchRecord, error) {
 
 	var prompts []PromptRef
 	for _, item := range r.dataset {
+		var msgs []provider.Message
+		for _, m := range item.Messages {
+			msgs = append(msgs, provider.Message{Role: m.Role, Content: m.Content})
+		}
 		prompts = append(prompts, PromptRef{
-			ID:   item.ID,
-			Text: item.Prompt,
+			ID:       item.ID,
+			Category: item.Category,
+			Text:     item.Prompt,
+			Messages: msgs,
 		})
 	}
 
@@ -125,6 +131,7 @@ func (r *Runner) executeMatch(ctx context.Context, sm ScheduledMatch) (*MatchRec
 	// 1. Dispatch prompt to Model A and Model B in parallel
 	req := provider.CompletionRequest{
 		Prompt:      sm.PromptText,
+		Messages:    sm.Messages,
 		Temperature: 0.7,
 	}
 
@@ -156,6 +163,7 @@ func (r *Runner) executeMatch(ctx context.Context, sm ScheduledMatch) (*MatchRec
 		ID:                   sm.ID,
 		TournamentID:         r.cfg.Tournament.Name,
 		PromptID:             sm.PromptID,
+		Category:             sm.Category,
 		PromptText:           sm.PromptText,
 		RoundNum:             sm.RoundNum,
 		ModelAID:             sm.ModelAID,

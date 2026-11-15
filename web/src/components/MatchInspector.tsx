@@ -29,7 +29,7 @@ export const MatchInspector: React.FC<Props> = ({ matches }) => {
   }
 
   return (
-    <div style={{ background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border-subtle)', padding: '1.5rem' }}>
+    <div className="responsive-card" style={{ background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border-subtle)', padding: '1.5rem' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <h2 style={{ fontSize: '1.15rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -149,7 +149,7 @@ export const MatchInspector: React.FC<Props> = ({ matches }) => {
                   </div>
 
                   {/* Side-by-side responses */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                  <div className="arena-grid-2col" style={{ marginBottom: '1rem' }}>
                     <div style={{ background: 'rgba(0,0,0,0.15)', padding: '0.85rem', borderRadius: '6px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem', fontSize: '0.8rem', fontWeight: 600, color: 'var(--accent-light)' }}>
                         <span>{m.model_a_id}</span>

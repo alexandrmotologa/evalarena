@@ -47,7 +47,7 @@ export const QuickBattle: React.FC<Props> = ({ models }) => {
   const diffResult = result ? computeWordDiff(result.response_a, result.response_b) : null;
 
   return (
-    <div style={{ background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border-subtle)', padding: '1.75rem' }}>
+    <div className="responsive-card" style={{ background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border-subtle)', padding: '1.75rem' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <h2 style={{ fontSize: '1.2rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -61,7 +61,7 @@ export const QuickBattle: React.FC<Props> = ({ models }) => {
       </div>
 
       {/* Model Selection and Setup Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+      <div className="arena-grid-2col" style={{ marginBottom: '1rem' }}>
         <div>
           <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-dim)', textTransform: 'uppercase', marginBottom: '0.3rem' }}>
             Contender Model A
@@ -237,7 +237,7 @@ export const QuickBattle: React.FC<Props> = ({ models }) => {
             </button>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1.25rem' }}>
+          <div className="arena-grid-2col" style={{ marginBottom: '1.25rem' }}>
             {/* Contender A output */}
             <div style={{
               background: 'rgba(255,255,255,0.02)',

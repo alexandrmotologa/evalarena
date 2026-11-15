@@ -62,7 +62,7 @@ export const LeaderboardTable: React.FC<Props> = ({
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', fontSize: '0.85rem' }}>
+          <div className="calibration-stats-row" style={{ fontSize: '0.85rem' }}>
             <div>
               <span style={{ color: 'var(--text-dim)', display: 'block', fontSize: '0.7rem', textTransform: 'uppercase' }}>Observed Agreement</span>
               <strong style={{ color: 'var(--success)', fontSize: '1.1rem' }} className="font-mono">

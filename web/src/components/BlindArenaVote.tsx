@@ -82,7 +82,7 @@ export const BlindArenaVote: React.FC = () => {
   }
 
   return (
-    <div style={{ background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border-subtle)', padding: '1.75rem' }}>
+    <div className="responsive-card" style={{ background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border-subtle)', padding: '1.75rem' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
@@ -139,7 +139,7 @@ export const BlindArenaVote: React.FC = () => {
       </div>
 
       {/* Side-by-side response cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1.5rem' }}>
+      <div className="arena-grid-2col" style={{ marginBottom: '1.5rem' }}>
         {/* Option A */}
         <div style={{
           background: 'rgba(255, 255, 255, 0.02)',

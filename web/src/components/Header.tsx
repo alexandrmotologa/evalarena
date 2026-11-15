@@ -20,7 +20,7 @@ export const Header: React.FC<Props> = ({ activeTab, setActiveTab, onRunTourname
       zIndex: 50,
       backdropFilter: 'blur(8px)',
     }}>
-      <div style={{ maxWidth: 1380, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+      <div className="header-container">
         {/* Brand */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <div style={{
@@ -59,7 +59,7 @@ export const Header: React.FC<Props> = ({ activeTab, setActiveTab, onRunTourname
         </div>
 
         {/* Tab Navigation */}
-        <nav style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'var(--bg-main)', padding: '0.25rem', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+        <nav className="header-nav">
           <button
             onClick={() => setActiveTab('leaderboard')}
             style={{
